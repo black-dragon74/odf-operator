@@ -146,6 +146,14 @@ func (r *SubscriptionReconciler) Reconcile(ctx context.Context, _ ctrl.Request) 
 		}
 	}
 
+	// cephcsi-operator 5.0 no longer declares v1alpha1. Drop the stale
+	// storedVersions entry before any dependency subscription is moved to the
+	// 5.0 channel; otherwise OLM and the apiserver reject the CRD update.
+	if err := r.removeDeprecatedCsiStoredVersion(ctx, logger); err != nil {
+		logger.Error(err, "failed to remove v1alpha1 from csi CRD storedVersions, blocking dependency upgrade")
+		return ctrl.Result{}, err
+	}
+
 	if err := r.ensureSubscriptions(ctx, logger, olmPkgRecords, userConfig, providerName); err != nil {
 		return ctrl.Result{}, err
 	}
